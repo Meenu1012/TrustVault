@@ -1,0 +1,72 @@
+
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="dashboard">
+
+    <div class="dashboard-heading">
+        <div>
+            <p class="dashboard-label">DOCUMENT EDITOR</p>
+            <h2>Edit Document</h2>
+            <p>Make changes to your text document and save them securely.</p>
+        </div>
+    </div>
+
+    <section class="workspace-card documents-section">
+
+        <h3>{{ document.filename }}</h3>
+
+        <form
+            method="POST"
+            action="{{ url_for('documents.edit_text_document', document_id=document.id) }}"
+        >
+
+            <input
+                type="hidden"
+                name="csrf_token"
+                value="{{ csrf_token() }}"
+            >
+
+            <label for="content">
+                Document Content
+            </label>
+
+            <textarea
+                id="content"
+                name="content"
+                rows="20"
+                required
+                style="
+                    width: 100%;
+                    padding: 15px;
+                    margin-top: 12px;
+                    border-radius: 8px;
+                    border: 1px solid #64748b;
+                    background: #111827;
+                    color: white;
+                    resize: vertical;
+                    font-family: monospace;
+                    font-size: 14px;
+                "
+            >{{ content }}</textarea>
+
+            <div style="margin-top: 15px; display: flex; gap: 10px;">
+
+                <button type="submit">
+                    Save Changes
+                </button>
+
+                <a href="{{ url_for('documents.shared_documents') }}">
+                    Cancel
+                </a>
+
+            </div>
+
+        </form>
+
+    </section>
+
+</section>
+
+{% endblock %}

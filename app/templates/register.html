@@ -1,0 +1,138 @@
+
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="auth-layout">
+
+    <!-- Left side: Registration introduction -->
+    <section class="auth-intro">
+
+        <div class="intro-tag">
+            <span class="status-dot"></span>
+            START YOUR PRIVATE SPACE
+        </div>
+
+        <h2>
+            A safer place<br>
+            for everything<br>
+            <span>important.</span>
+        </h2>
+
+        <p class="intro-description">
+            Create your TrustVault account and manage your
+            important documents from one organized space.
+        </p>
+
+        <div class="security-features">
+
+            <div class="feature-item">
+                <div class="feature-symbol">01</div>
+                <div>
+                    <h3>Your Own Space</h3>
+                    <p>Access your documents through your personal account.</p>
+                </div>
+            </div>
+
+            <div class="feature-item">
+                <div class="feature-symbol">02</div>
+                <div>
+                    <h3>Permission Control</h3>
+                    <p>Share documents with selected users and permissions.</p>
+                </div>
+            </div>
+
+            <div class="feature-item">
+                <div class="feature-symbol">03</div>
+                <div>
+                    <h3>Activity Records</h3>
+                    <p>Track important activities performed in your account.</p>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="intro-bottom">
+            TRUSTVAULT / YOUR DOCUMENTS, YOUR CONTROL
+        </div>
+
+    </section>
+
+    <!-- Right side: Registration form -->
+    <section class="auth-form-panel">
+
+        <div class="form-heading">
+
+            <div class="form-icon">+</div>
+
+            <p class="form-eyebrow">NEW ACCOUNT</p>
+
+            <h2>Create your account</h2>
+
+            <p>Fill in your details to get started.</p>
+
+        </div>
+
+        <form method="POST" action="{{ url_for('auth.register') }}">
+
+            <!-- CSRF security token -->
+            <input
+                type="hidden"
+                name="csrf_token"
+                value="{{ csrf_token() }}"
+            >
+
+            <label for="name">Full name</label>
+
+            <input
+                type="text"
+                id="name"
+                name="name"
+                placeholder="Enter your full name"
+                maxlength="100"
+                required
+            >
+
+            <label for="email">Email address</label>
+
+            <input
+                type="email"
+                id="email"
+                name="email"
+                placeholder="you@example.com"
+                maxlength="120"
+                required
+            >
+
+            <label for="password">Create password</label>
+
+            <input
+                type="password"
+                id="password"
+                name="password"
+                placeholder="Minimum 8 characters"
+                minlength="8"
+                required
+            >
+
+            <button type="submit" class="login-button">
+                Create My Account →
+            </button>
+
+        </form>
+
+        <div class="form-switch">
+            Already have an account?
+            <a href="{{ url_for('auth.login') }}">Sign in</a>
+        </div>
+
+        <div class="privacy-note">
+            <span>◆</span>
+            Your account is created with a hashed password.
+        </div>
+
+    </section>
+
+</div>
+
+{% endblock %}

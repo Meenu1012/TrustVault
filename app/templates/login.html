@@ -1,0 +1,75 @@
+
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="auth-container">
+
+    <div class="auth-card">
+
+        <h2>Welcome Back</h2>
+
+        <p>Choose your account type to continue.</p>
+
+        <form method="POST" action="{{ url_for('auth.login') }}">
+
+            <input type="hidden"
+                   name="csrf_token"
+                   value="{{ csrf_token() }}">
+
+            <!-- Account Type -->
+            <label>Select Login Type</label>
+
+            <div class="login-options">
+
+                <label class="login-option">
+                    <input type="radio"
+                           name="role"
+                           value="user"
+                           checked
+                           required>
+                    <span>👤 User Login</span>
+                </label>
+
+                <label class="login-option">
+                    <input type="radio"
+                           name="role"
+                           value="admin"
+                           required>
+                    <span>🛡️ Admin Login</span>
+                </label>
+
+            </div>
+
+            <!-- Email -->
+            <label>Email Address</label>
+
+            <input type="email"
+                   name="email"
+                   placeholder="Enter your email"
+                   required>
+
+            <!-- Password -->
+            <label>Password</label>
+
+            <input type="password"
+                   name="password"
+                   placeholder="Enter your password"
+                   required>
+
+            <button type="submit">Sign In →</button>
+
+        </form>
+
+        <p>
+            Don't have an account?
+            <a href="{{ url_for('auth.register') }}">
+                Create Account
+            </a>
+        </p>
+
+    </div>
+
+</div>
+
+{% endblock %}

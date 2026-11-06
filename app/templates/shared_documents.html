@@ -1,0 +1,200 @@
+
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="dashboard">
+
+    <div class="dashboard-heading">
+        <div>
+            <p class="dashboard-label">SHARED WITH YOU</p>
+            <h2>Shared Documents</h2>
+            <p>Documents other users have shared with your account.</p>
+        </div>
+    </div>
+
+    <section class="workspace-card documents-section">
+
+        <div class="section-heading">
+            <div>
+                <h3>Available Documents</h3>
+                <p>View, download, and edit documents shared with you.</p>
+            </div>
+
+            <span class="document-count">
+                {{ documents|length }} files
+            </span>
+        </div>
+
+        {% if documents %}
+
+            <div class="document-list">
+
+                {% for document in documents %}
+
+                    {% set ns = namespace(permission=None) %}
+
+                    {% for item in permissions %}
+                        {% if item.document_id == document.id %}
+                            {% set ns.permission = item %}
+                        {% endif %}
+                    {% endfor %}
+
+                    <div class="document-row">
+
+                        <div class="document-file-icon">FILE</div>
+
+                        <div class="document-info">
+
+                            <strong>{{ document.filename }}</strong>
+
+                            <span>
+                                Shared by:
+                                {{ document.owner.name if document.owner else "Unknown user" }}
+                            </span>
+
+                            <span>
+                                Access:
+                                {% if ns.permission and ns.permission.permission == "edit" %}
+                                    <strong>Edit Access</strong>
+                                {% else %}
+                                    View Only
+                                {% endif %}
+                            </span>
+
+                        </div>
+
+                        <!-- Document actions -->
+                        <div class="document-actions">
+
+                            <a href="{{ url_for('documents.view_document', document_id=document.id) }}">
+                                View
+                            </a>
+
+                            <a href="{{ url_for('documents.download_document', document_id=document.id) }}">
+                                Download
+                            </a>
+
+                            <!-- PDF editing -->
+                            {% if ns.permission
+                                  and ns.permission.permission == "edit"
+                                  and document.filename.lower().endswith(".pdf") %}
+
+                                <a href="{{ url_for('documents.edit_pdf_document', document_id=document.id) }}">
+                                    Edit PDF
+                                </a>
+
+                            {% endif %}
+
+                            <!-- TXT editing -->
+                            {% if ns.permission
+                                  and ns.permission.permission == "edit"
+                                  and document.filename.lower().endswith(".txt") %}
+
+                                <a href="{{ url_for('documents.edit_text_document', document_id=document.id) }}">
+                                    Edit Document
+                                </a>
+
+                            {% endif %}
+
+                        </div>
+
+                        <!-- Replace document -->
+                        {% if ns.permission and ns.permission.permission == "edit" %}
+
+                            <div class="replace-document-section">
+
+                                <h4>Update Shared Document</h4>
+
+                                <p>
+                                    You have Edit Access. Upload an updated version of this document.
+                                </p>
+
+                                <form
+                                    method="POST"
+                                    action="{{ url_for('documents.replace_document', document_id=document.id) }}"
+                                    enctype="multipart/form-data"
+                                >
+
+                                    <input
+                                        type="hidden"
+                                        name="csrf_token"
+                                        value="{{ csrf_token() }}"
+                                    >
+
+                                    <input
+                                        type="file"
+                                        name="file"
+                                        accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg,.xlsx,.xls,.ppt,.pptx"
+                                        required
+                                    >
+
+                                    <button type="submit">
+                                        Replace Document
+                                    </button>
+
+                                </form>
+
+                            </div>
+
+                        {% endif %}
+
+                    </div>
+
+                {% endfor %}
+
+            </div>
+
+        {% else %}
+
+            <div class="empty-state">
+                <h3>No shared documents yet</h3>
+                <p>Documents shared with your account will appear here.</p>
+            </div>
+
+        {% endif %}
+
+    </section>
+
+</section>
+
+<style>
+
+.replace-document-section {
+    width: 100%;
+    margin-top: 15px;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+}
+
+.replace-document-section h4 {
+    margin-bottom: 8px;
+}
+
+.replace-document-section p {
+    margin-bottom: 12px;
+}
+
+.replace-document-section input {
+    display: block;
+    margin-bottom: 12px;
+    max-width: 100%;
+}
+
+.replace-document-section button {
+    background-color: #2563eb;
+    color: white;
+    border: none;
+    padding: 9px 16px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.replace-document-section button:hover {
+    background-color: #1d4ed8;
+}
+
+</style>
+
+{% endblock %}

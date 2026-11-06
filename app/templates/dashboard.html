@@ -1,0 +1,249 @@
+
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="dashboard">
+
+    <!-- Welcome section -->
+    <div class="dashboard-heading">
+
+        <div>
+            <p class="dashboard-label">YOUR WORKSPACE</p>
+            <h2>Welcome back, {{ current_user.name }}.</h2>
+            <p>Manage your documents from one secure space.</p>
+        </div>
+
+        <div class="account-status">
+            <span class="status-dot"></span>
+            ACCOUNT ACTIVE
+        </div>
+
+    </div>
+
+    <!-- Statistics -->
+    <div class="stats-grid">
+
+        <div class="stat-card">
+            <div class="stat-icon">▤</div>
+            <p>TOTAL DOCUMENTS</p>
+            <h3>{{ documents|length }}</h3>
+            <span>Documents you own</span>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon">◇</div>
+            <p>ACCOUNT TYPE</p>
+            <h3>{{ current_user.role|capitalize }}</h3>
+            <span>Your current account role</span>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon">✓</div>
+            <p>STORAGE STATUS</p>
+            <h3>Ready</h3>
+            <span>Available for document uploads</span>
+        </div>
+
+    </div>
+
+    <!-- Upload area -->
+    <section class="workspace-card upload-section">
+
+        <div class="section-heading">
+            <div>
+                <p class="dashboard-label">ADD NEW FILE</p>
+                <h3>Upload a document</h3>
+                <p>Choose a file to add it to your personal workspace.</p>
+            </div>
+
+            <div class="upload-icon">↑</div>
+        </div>
+
+        <form method="POST"
+              action="{{ url_for('documents.upload_document') }}"
+              enctype="multipart/form-data">
+
+            <!-- CSRF protection -->
+            <input type="hidden"
+                   name="csrf_token"
+                   value="{{ csrf_token() }}">
+
+            <label class="upload-area" for="document-file">
+
+                <span class="upload-symbol">↑</span>
+                <strong>Choose a document</strong>
+                <span>PDF, DOC, DOCX, TXT, PNG or JPG</span>
+
+                <input
+                    type="file"
+                    id="document-file"
+                    name="file"
+                    accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg"
+                    required
+                >
+
+            </label>
+
+            <div class="upload-actions">
+                <span id="file-name">No file selected</span>
+
+                <button type="submit">
+                    Upload Document →
+                </button>
+            </div>
+
+        </form>
+
+    </section>
+
+    <!-- My documents -->
+    <section class="workspace-card documents-section">
+
+        <div class="section-heading">
+            <div>
+                <p class="dashboard-label">YOUR FILE COLLECTION</p>
+                <h3>My Documents</h3>
+                <p>Documents uploaded to your account.</p>
+            </div>
+
+            <span class="document-count">
+                {{ documents|length }} files
+            </span>
+        </div>
+
+        {% if documents %}
+
+            <div class="document-list">
+
+                {% for document in documents %}
+
+                    <div class="document-row">
+
+                        <div class="document-file-icon">FILE</div>
+
+                        <div class="document-info">
+                            <strong>{{ document.filename }}</strong>
+
+                            <span>
+                                Uploaded:
+                                {{ document.uploaded_at.strftime('%d %b %Y') if document.uploaded_at else 'Date unavailable' }}
+                            </span>
+                        </div>
+
+                        <div class="document-management">
+
+                            <!-- View, Download and Edit -->
+                            <div class="document-actions">
+
+                                <a href="{{ url_for('documents.view_document', document_id=document.id) }}">
+                                    View
+                                </a>
+
+                                <a href="{{ url_for('documents.download_document', document_id=document.id) }}">
+                                    Download
+                                </a>
+
+                                {% if document.filename.lower().endswith(".pdf") %}
+
+                                    <a href="{{ url_for('documents.edit_pdf_document', document_id=document.id) }}">
+                                        Edit PDF
+                                    </a>
+
+                                {% endif %}
+
+                                {% if document.filename.lower().endswith(".txt") %}
+
+                                    <a href="{{ url_for('documents.edit_text_document', document_id=document.id) }}">
+                                        Edit Document
+                                    </a>
+
+                                {% endif %}
+
+                            </div>
+
+                            <!-- Share document -->
+                            <form method="POST"
+                                  action="{{ url_for('documents.share_document', document_id=document.id) }}"
+                                  class="share-form">
+
+                                <!-- CSRF protection -->
+                                <input type="hidden"
+                                       name="csrf_token"
+                                       value="{{ csrf_token() }}">
+
+                                <input
+                                    type="email"
+                                    name="email"
+                                    placeholder="Recipient's registered email"
+                                    required
+                                >
+
+                                <select name="permission" required>
+                                    <option value="view">View access</option>
+                                    <option value="edit">Edit access</option>
+                                </select>
+
+                                <button type="submit" class="share-button">
+                                    Share Document
+                                </button>
+
+                            </form>
+
+                            <!-- Delete document -->
+                            <form method="POST"
+                                  action="{{ url_for('documents.delete_document', document_id=document.id) }}"
+                                  onsubmit="return confirm('Are you sure you want to permanently delete this document?');">
+
+                                <!-- CSRF protection -->
+                                <input type="hidden"
+                                       name="csrf_token"
+                                       value="{{ csrf_token() }}">
+
+                                <button type="submit" class="delete-button">
+                                    Delete Document
+                                </button>
+
+                            </form>
+
+                        </div>
+
+                    </div>
+
+                {% endfor %}
+
+            </div>
+
+        {% else %}
+
+            <div class="empty-state">
+                <div class="empty-icon">▤</div>
+                <h3>Your workspace is waiting</h3>
+                <p>You haven't uploaded any documents yet.</p>
+                <span>
+                    Upload your first document using the section above.
+                </span>
+            </div>
+
+        {% endif %}
+
+    </section>
+
+    <!-- Security information -->
+    <section class="security-banner">
+
+        <div class="security-banner-icon">◆</div>
+
+        <div>
+            <strong>Your documents, your control.</strong>
+            <p>
+                TrustVault uses account authentication and document
+                permissions to control access.
+            </p>
+        </div>
+
+    </section>
+
+</section>
+
+{% endblock %}

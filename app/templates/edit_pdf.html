@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="dashboard">
+
+    <div class="dashboard-heading">
+        <div>
+            <p class="dashboard-label">PDF EDITOR</p>
+            <h2>Edit PDF Document</h2>
+            <p>Add text to a selected page of your PDF.</p>
+        </div>
+    </div>
+
+    <section class="workspace-card documents-section">
+
+        <h3>{{ document.filename }}</h3>
+
+        <form method="POST"
+              action="{{ url_for('documents.edit_pdf_document', document_id=document.id) }}">
+
+            <input type="hidden"
+                   name="csrf_token"
+                   value="{{ csrf_token() }}">
+
+            <label for="page_number">Page Number</label>
+
+            <input type="number"
+                   id="page_number"
+                   name="page_number"
+                   min="1"
+                   max="{{ page_count }}"
+                   value="1"
+                   required>
+
+            <label for="text" style="display:block;margin-top:15px;">
+                Text to Add
+            </label>
+
+            <textarea id="text"
+                      name="text"
+                      rows="6"
+                      required
+                      placeholder="Enter the text you want to add..."
+                      style="width:100%;padding:12px;margin-top:10px;"></textarea>
+
+            <button type="submit" style="margin-top:15px;">
+                Save PDF Changes
+            </button>
+
+            <a href="{{ url_for('documents.shared_documents') }}">
+                Cancel
+            </a>
+
+        </form>
+
+        <p style="margin-top:15px;">
+            This feature adds new text to a PDF page.
+            It does not modify existing PDF text.
+        </p>
+
+    </section>
+
+</section>
+
+{% endblock %}

@@ -1,0 +1,365 @@
+
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="admin-dashboard">
+
+    <h2>TrustVault Admin Dashboard</h2>
+    <p>Monitor users, documents and security activities.</p>
+
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+
+        {% if messages %}
+
+            {% for category, message in messages %}
+
+                <div class="admin-message {{ category }}">
+                    {{ message }}
+                </div>
+
+            {% endfor %}
+
+        {% endif %}
+
+    {% endwith %}
+
+
+    <!-- Dashboard Statistics -->
+    <div class="admin-stats">
+
+        <div class="admin-card">
+            <h3>Total Users</h3>
+            <h2>{{ total_users|default(users|length) }}</h2>
+        </div>
+
+        <div class="admin-card">
+            <h3>Administrators</h3>
+            <h2>{{ total_admins|default(0) }}</h2>
+        </div>
+
+        <div class="admin-card">
+            <h3>Normal Users</h3>
+            <h2>{{ total_normal_users|default(0) }}</h2>
+        </div>
+
+        <div class="admin-card">
+            <h3>Total Documents</h3>
+            <h2>{{ total_documents|default(documents|length) }}</h2>
+        </div>
+
+        <div class="admin-card">
+            <h3>Audit Activities</h3>
+            <h2>{{ total_audit_logs|default(audit_logs|length) }}</h2>
+        </div>
+
+    </div>
+
+    <hr>
+
+
+    <!-- Registered Users -->
+    <section>
+
+        <h3>Registered Users</h3>
+
+        <input
+            type="text"
+            id="userSearch"
+            placeholder="Search users by name or email..."
+            onkeyup="filterItems('userSearch', 'userList')"
+        >
+
+        <div id="userList">
+
+            {% for user in users %}
+
+                <div class="admin-card searchable-item">
+
+                    <p>
+                        <strong>Name:</strong>
+                        {{ user.name }}
+                    </p>
+
+                    <p>
+                        <strong>Email:</strong>
+                        {{ user.email }}
+                    </p>
+
+                    <p>
+                        <strong>Role:</strong>
+                        {{ user.role }}
+                    </p>
+
+                    {% if user.role|lower == 'user' and user.id != current_user.id %}
+
+                        <!-- Delete User Form -->
+                        <form
+                            method="POST"
+                            action="{{ url_for('admin.delete_user', user_id=user.id) }}"
+                            onsubmit="return confirmDelete('{{ user.name|e }}');"
+                        >
+
+                            <!-- CSRF Protection -->
+                            <input
+                                type="hidden"
+                                name="csrf_token"
+                                value="{{ csrf_token() }}"
+                            >
+
+                            <button
+                                type="submit"
+                                class="delete-user-btn"
+                            >
+                                Delete User
+                            </button>
+
+                        </form>
+
+                    {% elif user.id == current_user.id %}
+
+                        <p class="account-label">
+                            Current Admin Account
+                        </p>
+
+                    {% elif user.role|lower == 'admin' %}
+
+                        <p class="account-label">
+                            Administrator Account
+                        </p>
+
+                    {% endif %}
+
+                </div>
+
+            {% else %}
+
+                <p>No users registered.</p>
+
+            {% endfor %}
+
+        </div>
+
+    </section>
+
+    <hr>
+
+
+    <!-- Uploaded Documents -->
+    <section>
+
+        <h3>Uploaded Documents</h3>
+
+        <input
+            type="text"
+            id="documentSearch"
+            placeholder="Search documents..."
+            onkeyup="filterItems('documentSearch', 'documentList')"
+        >
+
+        <div id="documentList">
+
+            {% for document in documents %}
+
+                <div class="admin-card searchable-item">
+
+                    <p>
+                        <strong>Document:</strong>
+                        {{ document.filename }}
+                    </p>
+
+                    <p>
+                        <strong>Owner ID:</strong>
+                        {{ document.owner_id }}
+                    </p>
+
+                    <p>
+                        <strong>Uploaded:</strong>
+
+                        {{ document.uploaded_at.strftime("%d %b %Y, %I:%M %p")
+                        if document.uploaded_at else "Unknown" }}
+
+                    </p>
+
+                </div>
+
+            {% else %}
+
+                <p>No documents uploaded.</p>
+
+            {% endfor %}
+
+        </div>
+
+    </section>
+
+    <hr>
+
+
+    <!-- Security Audit Logs -->
+    <section>
+
+        <h3>Security Audit Logs</h3>
+
+        <p>Track important activities performed by registered users.</p>
+
+        <input
+            type="text"
+            id="auditSearch"
+            placeholder="Search audit activities..."
+            onkeyup="filterItems('auditSearch', 'auditList')"
+        >
+
+        <div id="auditList">
+
+            {% for log in audit_logs %}
+
+                <div class="admin-card searchable-item">
+
+                    <p>
+                        <strong>User:</strong>
+
+                        {{ log.user.name if log.user else "Former User / Unknown User" }}
+
+                    </p>
+
+                    <p>
+                        <strong>Activity:</strong>
+                        {{ log.action }}
+                    </p>
+
+                    <p>
+                        <strong>Details:</strong>
+                        {{ log.details or "No additional details" }}
+                    </p>
+
+                    <p>
+                        <strong>Date:</strong>
+
+                        {{ log.created_at.strftime("%d %b %Y, %I:%M %p")
+                        if log.created_at else "Unknown" }}
+
+                    </p>
+
+                </div>
+
+            {% else %}
+
+                <p>No audit activities recorded yet.</p>
+
+            {% endfor %}
+
+        </div>
+
+    </section>
+
+</div>
+
+
+<script>
+
+// Search functionality
+function filterItems(inputId, listId) {
+
+    const input = document.getElementById(inputId);
+
+    const filter = input.value.toLowerCase();
+
+    const list = document.getElementById(listId);
+
+    const items = list.getElementsByClassName("searchable-item");
+
+    for (let i = 0; i < items.length; i++) {
+
+        const text = items[i].textContent.toLowerCase();
+
+        if (text.includes(filter)) {
+
+            items[i].style.display = "";
+
+        } else {
+
+            items[i].style.display = "none";
+
+        }
+
+    }
+
+}
+
+
+// Delete confirmation
+function confirmDelete(username) {
+
+    return confirm(
+        "Are you sure you want to delete " + username +
+        "?\n\nTheir documents will be transferred to the admin."
+    );
+
+}
+
+</script>
+
+
+<style>
+
+/* Delete User Button */
+.delete-user-btn {
+
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    padding: 9px 16px;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-top: 10px;
+    font-weight: bold;
+
+}
+
+.delete-user-btn:hover {
+
+    background-color: #b02a37;
+
+}
+
+
+/* Flash Messages */
+.admin-message {
+
+    padding: 12px;
+    margin: 15px 0;
+    border-radius: 5px;
+
+}
+
+.admin-message.success {
+
+    background-color: #d1e7dd;
+    color: #0f5132;
+
+}
+
+.admin-message.danger,
+.admin-message.error {
+
+    background-color: #f8d7da;
+    color: #842029;
+
+}
+
+
+/* Account Labels */
+.account-label {
+
+    color: #198754;
+    font-weight: bold;
+    margin-top: 10px;
+
+}
+
+</style>
+
+{% endblock %}
