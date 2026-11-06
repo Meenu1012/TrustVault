@@ -9,11 +9,14 @@ from werkzeug.security import generate_password_hash
 
 
 def create_test_app():
+    os.environ["TESTING"] = "1"
+
     app = create_app()
+
     app.config["TESTING"] = True
     app.config["WTF_CSRF_ENABLED"] = False
-    return app
 
+    return app
 
 def unique_email(prefix):
     return f"{prefix}-{uuid.uuid4().hex}@example.com"

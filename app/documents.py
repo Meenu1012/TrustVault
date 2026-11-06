@@ -1,6 +1,9 @@
 
 import os
+import io
 import uuid
+import mimetypes
+
 import pymupdf
 
 from flask import (
@@ -11,7 +14,7 @@ from flask import (
     url_for,
     flash,
     current_app,
-    send_from_directory,
+    send_file,
     abort
 )
 
@@ -33,8 +36,10 @@ ALLOWED_EXTENSIONS = {
     "xlsx", "xls", "ppt", "pptx"
 }
 
+STORAGE_BUCKET = "trustvault-documents"
 
-# Upload folder
+
+# Local upload folder (used by automated tests)
 def get_upload_folder():
 
     folder = os.path.join(
@@ -45,6 +50,103 @@ def get_upload_folder():
     os.makedirs(folder, exist_ok=True)
 
     return folder
+
+
+# Check whether Supabase Storage should be used
+def use_supabase_storage():
+
+    return (
+        bool(current_app.extensions.get("supabase"))
+        and not os.environ.get("TESTING")
+    )
+
+
+# Save a document to Supabase or local storage
+def store_file(stored_filename, data, content_type=None, upsert=False):
+
+    if use_supabase_storage():
+
+        bucket = current_app.extensions["supabase"].storage.from_(
+            STORAGE_BUCKET
+        )
+
+        bucket.upload(
+            stored_filename,
+            data,
+            file_options={
+                "content-type": content_type or "application/octet-stream",
+                "upsert": str(upsert).lower()
+            }
+        )
+
+    else:
+
+        path = os.path.join(
+            get_upload_folder(),
+            stored_filename
+        )
+
+        with open(path, "wb") as file:
+            file.write(data)
+
+
+# Read a document from Supabase or local storage
+def read_file(stored_filename):
+
+    if use_supabase_storage():
+
+        bucket = current_app.extensions["supabase"].storage.from_(
+            STORAGE_BUCKET
+        )
+
+        return bucket.download(stored_filename)
+
+    path = os.path.join(
+        get_upload_folder(),
+        stored_filename
+    )
+
+    with open(path, "rb") as file:
+        return file.read()
+
+
+# Delete a document from Supabase or local storage
+def delete_file(stored_filename):
+
+    if use_supabase_storage():
+
+        bucket = current_app.extensions["supabase"].storage.from_(
+            STORAGE_BUCKET
+        )
+
+        bucket.remove([stored_filename])
+
+    else:
+
+        path = os.path.join(
+            get_upload_folder(),
+            stored_filename
+        )
+
+        if os.path.exists(path):
+            os.remove(path)
+
+
+# Read document bytes safely
+def get_document_bytes(stored_filename):
+
+    try:
+
+        return read_file(stored_filename)
+
+    except Exception:
+
+        current_app.logger.exception(
+            "Could not read stored document: %s",
+            stored_filename
+        )
+
+        abort(404)
 
 
 # Check allowed file extensions
@@ -176,16 +278,19 @@ def upload_document():
 
     stored_filename = str(uuid.uuid4()) + "_" + original_filename
 
-    upload_folder = get_upload_folder()
-
-    file_path = os.path.join(
-        upload_folder,
-        stored_filename
-    )
+    uploaded = False
 
     try:
 
-        file.save(file_path)
+        file_data = file.read()
+
+        store_file(
+            stored_filename,
+            file_data,
+            content_type=file.mimetype
+        )
+
+        uploaded = True
 
         document = Document(
             filename=original_filename,
@@ -209,8 +314,15 @@ def upload_document():
 
         db.session.rollback()
 
-        if os.path.exists(file_path):
-            os.remove(file_path)
+        if uploaded:
+
+            try:
+                delete_file(stored_filename)
+
+            except Exception:
+                current_app.logger.exception(
+                    "Could not clean up failed upload"
+                )
 
         current_app.logger.exception("Document upload failed")
 
@@ -229,15 +341,9 @@ def view_document(document_id):
     if not can_access_document(document):
         abort(403)
 
-    upload_folder = get_upload_folder()
-
-    file_path = os.path.join(
-        upload_folder,
+    file_data = get_document_bytes(
         document.stored_filename
     )
-
-    if not os.path.isfile(file_path):
-        abort(404)
 
     log_activity(
         "VIEW",
@@ -246,9 +352,14 @@ def view_document(document_id):
 
     db.session.commit()
 
-    return send_from_directory(
-        upload_folder,
-        document.stored_filename,
+    content_type = (
+        mimetypes.guess_type(document.filename)[0]
+        or "application/octet-stream"
+    )
+
+    return send_file(
+        io.BytesIO(file_data),
+        mimetype=content_type,
         as_attachment=False,
         download_name=document.filename
     )
@@ -264,15 +375,9 @@ def download_document(document_id):
     if not can_access_document(document):
         abort(403)
 
-    upload_folder = get_upload_folder()
-
-    file_path = os.path.join(
-        upload_folder,
+    file_data = get_document_bytes(
         document.stored_filename
     )
-
-    if not os.path.isfile(file_path):
-        abort(404)
 
     log_activity(
         "DOWNLOAD",
@@ -281,9 +386,9 @@ def download_document(document_id):
 
     db.session.commit()
 
-    return send_from_directory(
-        upload_folder,
-        document.stored_filename,
+    return send_file(
+        io.BytesIO(file_data),
+        mimetype="application/octet-stream",
         as_attachment=True,
         download_name=document.filename
     )
@@ -326,27 +431,25 @@ def replace_document(document_id):
         flash("Invalid filename.", "danger")
         return redirect(url_for("documents.shared_documents"))
 
-    upload_folder = get_upload_folder()
-
     new_stored_filename = (
         str(uuid.uuid4()) + "_" + new_original_filename
     )
 
-    new_file_path = os.path.join(
-        upload_folder,
-        new_stored_filename
-    )
-
-    old_file_path = os.path.join(
-        upload_folder,
-        document.stored_filename
-    )
-
     old_stored_filename = document.stored_filename
+
+    uploaded = False
 
     try:
 
-        file.save(new_file_path)
+        file_data = file.read()
+
+        store_file(
+            new_stored_filename,
+            file_data,
+            content_type=file.mimetype
+        )
+
+        uploaded = True
 
         document.filename = new_original_filename
         document.stored_filename = new_stored_filename
@@ -363,8 +466,15 @@ def replace_document(document_id):
 
         db.session.rollback()
 
-        if os.path.isfile(new_file_path):
-            os.remove(new_file_path)
+        if uploaded:
+
+            try:
+                delete_file(new_stored_filename)
+
+            except Exception:
+                current_app.logger.exception(
+                    "Could not clean up replacement file"
+                )
 
         current_app.logger.exception(
             "Document replacement failed"
@@ -382,10 +492,9 @@ def replace_document(document_id):
 
     try:
 
-        if os.path.isfile(old_file_path):
-            os.remove(old_file_path)
+        delete_file(old_stored_filename)
 
-    except OSError:
+    except Exception:
 
         current_app.logger.exception(
             "Could not remove old document"
@@ -415,13 +524,7 @@ def delete_document(document_id):
     ):
         abort(403)
 
-    upload_folder = get_upload_folder()
-
-    file_path = os.path.join(
-        upload_folder,
-        document.stored_filename
-    )
-
+    stored_filename = document.stored_filename
     filename = document.filename
 
     try:
@@ -438,11 +541,6 @@ def delete_document(document_id):
         db.session.delete(document)
         db.session.commit()
 
-        if os.path.isfile(file_path):
-            os.remove(file_path)
-
-        flash("Document deleted successfully.", "success")
-
     except Exception:
 
         db.session.rollback()
@@ -450,6 +548,20 @@ def delete_document(document_id):
         current_app.logger.exception("Document deletion failed")
 
         flash("Could not delete document.", "danger")
+
+        return redirect(url_for("documents.dashboard"))
+
+    try:
+
+        delete_file(stored_filename)
+
+    except Exception:
+
+        current_app.logger.exception(
+            "Document database record deleted, but storage cleanup failed"
+        )
+
+    flash("Document deleted successfully.", "success")
 
     return redirect(url_for("documents.dashboard"))
 
@@ -562,22 +674,15 @@ def edit_text_document(document_id):
 
         return redirect(url_for("documents.shared_documents"))
 
-    upload_folder = get_upload_folder()
-
-    file_path = os.path.join(
-        upload_folder,
+    original_data = get_document_bytes(
         document.stored_filename
     )
-
-    if not os.path.isfile(file_path):
-        abort(404)
 
     if request.method == "GET":
 
         try:
 
-            with open(file_path, "r", encoding="utf-8") as file:
-                content = file.read()
+            content = original_data.decode("utf-8")
 
         except UnicodeDecodeError:
 
@@ -592,46 +697,23 @@ def edit_text_document(document_id):
 
     new_content = request.form.get("content", "")
 
-    temp_path = file_path + "." + str(uuid.uuid4()) + ".tmp"
-    backup_path = file_path + "." + str(uuid.uuid4()) + ".bak"
-
     try:
 
-        with open(
-            temp_path,
-            "w",
-            encoding="utf-8",
-            newline=""
-        ) as file:
+        new_data = new_content.encode("utf-8")
 
-            file.write(new_content)
+        store_file(
+            document.stored_filename,
+            new_data,
+            content_type="text/plain",
+            upsert=True
+        )
 
-        os.replace(file_path, backup_path)
+        log_activity(
+            "DOCUMENT_EDIT",
+            f"Edited TXT document: {document.filename}"
+        )
 
-        try:
-
-            os.replace(temp_path, file_path)
-
-            log_activity(
-                "DOCUMENT_EDIT",
-                f"Edited TXT document: {document.filename}"
-            )
-
-            db.session.commit()
-
-        except Exception:
-
-            db.session.rollback()
-
-            if os.path.exists(file_path):
-                os.remove(file_path)
-
-            os.replace(backup_path, file_path)
-
-            raise
-
-        if os.path.exists(backup_path):
-            os.remove(backup_path)
+        db.session.commit()
 
         flash("Document changes saved successfully.", "success")
 
@@ -647,8 +729,20 @@ def edit_text_document(document_id):
 
         db.session.rollback()
 
-        if os.path.exists(temp_path):
-            os.remove(temp_path)
+        try:
+
+            store_file(
+                document.stored_filename,
+                original_data,
+                content_type="text/plain",
+                upsert=True
+            )
+
+        except Exception:
+
+            current_app.logger.exception(
+                "Could not restore original TXT document"
+            )
 
         current_app.logger.exception(
             "TXT document editing failed"
@@ -680,19 +774,17 @@ def edit_pdf_document(document_id):
     if not document.filename.lower().endswith(".pdf"):
         abort(400, description="Only PDF files can be edited.")
 
-    upload_folder = get_upload_folder()
-
-    file_path = os.path.join(
-        upload_folder,
+    original_data = get_document_bytes(
         document.stored_filename
     )
 
-    if not os.path.isfile(file_path):
-        abort(404)
-
     try:
 
-        with pymupdf.open(file_path) as pdf:
+        with pymupdf.open(
+            stream=original_data,
+            filetype="pdf"
+        ) as pdf:
+
             page_count = pdf.page_count
 
     except Exception:
@@ -709,24 +801,25 @@ def edit_pdf_document(document_id):
             abort(400, description="Invalid page number.")
 
         if not text:
+
             flash("Please enter text.", "danger")
 
         elif len(text) > 2000:
+
             flash("Text must be 2000 characters or fewer.", "danger")
 
         elif page_number < 1 or page_number > page_count:
+
             flash("Invalid page number.", "danger")
 
         else:
 
-            temp_path = os.path.join(
-                upload_folder,
-                str(uuid.uuid4()) + "_edited.pdf"
-            )
-
             try:
 
-                with pymupdf.open(file_path) as pdf:
+                with pymupdf.open(
+                    stream=original_data,
+                    filetype="pdf"
+                ) as pdf:
 
                     page = pdf[page_number - 1]
 
@@ -750,13 +843,17 @@ def edit_pdf_document(document_id):
                             "Text is too long for the selected area."
                         )
 
-                    pdf.save(
-                        temp_path,
+                    edited_data = pdf.tobytes(
                         garbage=4,
                         deflate=True
                     )
 
-                os.replace(temp_path, file_path)
+                store_file(
+                    document.stored_filename,
+                    edited_data,
+                    content_type="application/pdf",
+                    upsert=True
+                )
 
                 log_activity(
                     "PDF_EDIT",
@@ -777,17 +874,26 @@ def edit_pdf_document(document_id):
 
             except ValueError as error:
 
-                if os.path.exists(temp_path):
-                    os.remove(temp_path)
-
                 flash(str(error), "danger")
 
             except Exception:
 
                 db.session.rollback()
 
-                if os.path.exists(temp_path):
-                    os.remove(temp_path)
+                try:
+
+                    store_file(
+                        document.stored_filename,
+                        original_data,
+                        content_type="application/pdf",
+                        upsert=True
+                    )
+
+                except Exception:
+
+                    current_app.logger.exception(
+                        "Could not restore original PDF"
+                    )
 
                 current_app.logger.exception(
                     "PDF editing failed"

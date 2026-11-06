@@ -91,7 +91,65 @@ def dashboard():
         total_documents=len(documents),
         total_audit_logs=total_audit_logs
     )
+# Promote normal user to administrator
+@admin_bp.route(
+    "/promote-user/<int:user_id>",
+    methods=["POST"]
+)
+@login_required
+@admin_required
+def promote_user(user_id):
 
+    user = db.session.get(User, user_id)
+
+    if user is None:
+        flash("User not found.", "danger")
+        return redirect(url_for("admin.dashboard"))
+
+    if user.id == current_user.id:
+        flash("You cannot promote your own account.", "danger")
+        return redirect(url_for("admin.dashboard"))
+
+    if (user.role or "").strip().lower() != "user":
+        flash("Only normal users can be promoted.", "danger")
+        return redirect(url_for("admin.dashboard"))
+
+    username = user.name
+    user_email = user.email
+
+    try:
+        user.role = "admin"
+
+        promotion_log = AuditLog(
+            user_id=current_user.id,
+            action="USER_PROMOTION",
+            details=(
+                f"Promoted {username} ({user_email}, "
+                f"ID: {user.id}) to administrator."
+            )
+        )
+
+        db.session.add(promotion_log)
+        db.session.commit()
+
+        flash(
+            f"{username} has been promoted to administrator.",
+            "success"
+        )
+
+    except Exception:
+        db.session.rollback()
+
+        current_app.logger.exception(
+            "User promotion failed"
+        )
+
+        flash(
+            "Could not promote user. Please check application logs.",
+            "danger"
+        )
+
+    return redirect(url_for("admin.dashboard"))
 
 # Delete normal user account
 @admin_bp.route(

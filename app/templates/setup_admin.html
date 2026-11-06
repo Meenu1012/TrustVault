@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="auth-layout">
+
+    <section class="auth-intro">
+
+        <div class="intro-tag">
+            <span class="status-dot"></span>
+            TRUSTVAULT ADMINISTRATION
+        </div>
+
+        <h2>
+            Secure your<br>
+            document<br>
+            <span>workspace.</span>
+        </h2>
+
+        <p class="intro-description">
+            Create the first administrator account to manage
+            TrustVault securely.
+        </p>
+
+        <div class="security-features">
+
+            <div class="feature-item">
+                <div class="feature-symbol">01</div>
+                <div>
+                    <h3>Protected Setup</h3>
+                    <p>A private setup key is required.</p>
+                </div>
+            </div>
+
+            <div class="feature-item">
+                <div class="feature-symbol">02</div>
+                <div>
+                    <h3>Administrator Access</h3>
+                    <p>Manage users and documents.</p>
+                </div>
+            </div>
+
+            <div class="feature-item">
+                <div class="feature-symbol">03</div>
+                <div>
+                    <h3>One-Time Registration</h3>
+                    <p>Setup closes after the first administrator is created.</p>
+                </div>
+            </div>
+
+        </div>
+
+    </section>
+
+    <section class="auth-form-panel">
+
+        <div class="form-heading">
+
+            <div class="form-icon">+</div>
+
+            <p class="form-eyebrow">INITIAL ADMINISTRATOR</p>
+
+            <h2>Create admin account</h2>
+
+            <p>Enter your details and private setup key.</p>
+
+        </div>
+
+        <form method="POST" action="{{ url_for('auth.setup_admin') }}">
+
+            <input
+                type="hidden"
+                name="csrf_token"
+                value="{{ csrf_token() }}"
+            >
+
+            <label for="name">Full name</label>
+
+            <input
+                type="text"
+                id="name"
+                name="name"
+                placeholder="Enter your full name"
+                maxlength="100"
+                required
+            >
+
+            <label for="email">Email address</label>
+
+            <input
+                type="email"
+                id="email"
+                name="email"
+                placeholder="you@example.com"
+                maxlength="120"
+                required
+            >
+
+            <label for="password">Create password</label>
+
+            <input
+                type="password"
+                id="password"
+                name="password"
+                placeholder="Minimum 8 characters"
+                minlength="8"
+                required
+            >
+
+            <label for="setup_key">Private setup key</label>
+
+            <input
+                type="password"
+                id="setup_key"
+                name="setup_key"
+                placeholder="Enter your private setup key"
+                required
+            >
+
+            <button type="submit" class="login-button">
+                Create Administrator
+            </button>
+
+        </form>
+
+        <div class="form-switch">
+            Already have an account?
+            <a href="{{ url_for('auth.login') }}">Sign in</a>
+        </div>
+
+        <div class="privacy-note">
+            Your administrator setup key is never stored in the database.
+        </div>
+
+    </section>
+
+</div>
+
+{% endblock %}

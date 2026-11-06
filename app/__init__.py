@@ -1,11 +1,16 @@
 
 import os
 
+from dotenv import load_dotenv
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_wtf.csrf import CSRFProtect
+from supabase import create_client
 
+
+# Load environment variables from .env
+load_dotenv()
 
 # Initialize database
 db = SQLAlchemy()
@@ -31,10 +36,23 @@ def create_app():
     )
 
     # Database configuration
-    app.config["SQLALCHEMY_DATABASE_URI"] = (
-        "sqlite:///" +
-        os.path.join(app.instance_path, "trustvault.db")
-    )
+    database_url = os.environ.get("DATABASE_URL")
+
+    if database_url and not os.environ.get("TESTING"):
+        if database_url.startswith("postgresql://"):
+            database_url = database_url.replace(
+                "postgresql://",
+                "postgresql+psycopg://",
+                1
+            )
+
+        app.config["SQLALCHEMY_DATABASE_URI"] = database_url
+
+    else:
+        app.config["SQLALCHEMY_DATABASE_URI"] = (
+            "sqlite:///" +
+            os.path.join(app.instance_path, "trustvault.db")
+        )
 
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
@@ -45,19 +63,27 @@ def create_app():
     app.config["SESSION_COOKIE_HTTPONLY"] = True
     app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 
-    # Enable secure cookies in production
     app.config["SESSION_COOKIE_SECURE"] = (
         os.environ.get("FLASK_ENV") == "production"
+        or os.environ.get("RENDER") == "true"
     )
 
     # Create instance folder
     os.makedirs(app.instance_path, exist_ok=True)
 
+    # Initialize Supabase Storage client
+    supabase_url = os.environ.get("SUPABASE_URL")
+    supabase_key = os.environ.get("SUPABASE_KEY")
+
+    if supabase_url and supabase_key and not os.environ.get("TESTING"):
+        app.extensions["supabase"] = create_client(
+            supabase_url,
+            supabase_key
+        )
+
     # Initialize extensions
     db.init_app(app)
-
     login_manager.init_app(app)
-
     csrf.init_app(app)
 
     # Login configuration
@@ -73,11 +99,9 @@ def create_app():
     app.register_blueprint(documents_bp)
     app.register_blueprint(admin_bp)
 
-    # Create database tables if they do not exist
+    # Create database tables
     with app.app_context():
-
         from app import models
-
         db.create_all()
 
     return app
