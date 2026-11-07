@@ -1,4 +1,4 @@
-﻿
+
 {% extends "base.html" %}
 
 {% block content %}
@@ -25,21 +25,21 @@
     <div class="stats-grid">
 
         <div class="stat-card">
-            <div class="stat-icon">â–¤</div>
+            <div class="stat-icon">D</div>
             <p>TOTAL DOCUMENTS</p>
             <h3>{{ documents|length }}</h3>
-            <span>Documents you own</span>
+            <span>documents you own</span>
         </div>
 
         <div class="stat-card">
-            <div class="stat-icon">â—‡</div>
+            <div class="stat-icon">S</div>
             <p>ACCOUNT TYPE</p>
             <h3>{{ current_user.role|capitalize }}</h3>
             <span>Your current account role</span>
         </div>
 
         <div class="stat-card">
-            <div class="stat-icon">âœ“</div>
+            <div class="stat-icon">S</div>
             <p>STORAGE STATUS</p>
             <h3>Ready</h3>
             <span>Available for document uploads</span>
@@ -52,12 +52,12 @@
 
         <div class="section-heading">
             <div>
-                <p class="dashboard-label">ADD NEW FILE</p>
+                <p class="dashboard-label">ADD NEW doc</p>
                 <h3>Upload a document</h3>
                 <p>Choose a file to add it to your personal workspace.</p>
             </div>
 
-            <div class="upload-icon">â†‘</div>
+            <div class="upload-icon">UP</div>
         </div>
 
         <form method="POST"
@@ -71,9 +71,9 @@
 
             <label class="upload-area" for="document-file">
 
-                <span class="upload-symbol">â†‘</span>
+                <span class="upload-symbol">+</span>
                 <strong>Choose a document</strong>
-                <span>PDF, DOC, DOCX, TXT, PNG or JPG</span>
+                <span>PDF, doc, docX, TXT, PNG or JPG</span>
 
                 <input
                     type="file"
@@ -89,7 +89,7 @@
                 <span id="file-name">No file selected</span>
 
                 <button type="submit">
-                    Upload Document â†’
+                    Upload document
                 </button>
             </div>
 
@@ -103,8 +103,8 @@
         <div class="section-heading">
             <div>
                 <p class="dashboard-label">YOUR FILE COLLECTION</p>
-                <h3>My Documents</h3>
-                <p>Documents uploaded to your account.</p>
+                <h3>My documents</h3>
+                <p>documents uploaded to your account.</p>
             </div>
 
             <span class="document-count">
@@ -120,7 +120,7 @@
 
                     <div class="document-row">
 
-                        <div class="document-file-icon">FILE</div>
+                        <div class="document-file-icon">D</div>
 
                         <div class="document-info">
                             <strong>{{ document.filename }}</strong>
@@ -155,7 +155,7 @@
                                 {% if document.filename.lower().endswith(".txt") %}
 
                                     <a href="{{ url_for('documents.edit_text_document', document_id=document.id) }}">
-                                        Edit Document
+                                        Edit document
                                     </a>
 
                                 {% endif %}
@@ -185,7 +185,7 @@
                                 </select>
 
                                 <button type="submit" class="share-button">
-                                    Share Document
+                                    Share document
                                 </button>
 
                             </form>
@@ -243,7 +243,7 @@
                         <!-- Remove sharing permission -->
                         <form method="POST"
                               action="{{ url_for('documents.unshare_document', document_id=document.id, user_id=permission.user_id) }}"
-                              onsubmit="return confirm('Remove this userâ€™s access to the document?');">
+                              onsubmit="return confirm('Remove this user's access to the document?');">
 
                             <input type="hidden"
                                    name="csrf_token"
@@ -278,7 +278,7 @@
                                        value="{{ csrf_token() }}">
 
                                 <button type="submit" class="delete-button">
-                                    Delete Document
+                                    Delete document
                                 </button>
 
                             </form>
@@ -294,7 +294,7 @@
         {% else %}
 
             <div class="empty-state">
-                <div class="empty-icon">â–¤</div>
+                <div class="empty-icon">D</div>
                 <h3>Your workspace is waiting</h3>
                 <p>You haven't uploaded any documents yet.</p>
                 <span>
@@ -309,7 +309,7 @@
     <!-- Security information -->
     <section class="security-banner">
 
-        <div class="security-banner-icon">â—†</div>
+        <div class="security-banner-icon">S</div>
 
         <div>
             <strong>Your documents, your control.</strong>
