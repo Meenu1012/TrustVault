@@ -102,7 +102,7 @@ Original document contents may be overwritten or lost.
 
 - Verify ownership or explicit Edit permission before accepting replacement uploads.
 - Reject replacement requests from unauthorized users.
-- Preserve document permission records when replacing a document.
+- Keep the existing document record and sharing permissions during replacement.
 
 **Verification:**
 
