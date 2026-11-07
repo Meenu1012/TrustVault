@@ -1,10 +1,10 @@
-# TrustVault – AI Development Log
+# TrustVault - AI Development Log
 
 This document records how AI tools were used during the development of TrustVault, the problems identified in suggested solutions, and the corrections made during development.
 
 AI assistance was used for coding guidance, debugging, implementation suggestions and documentation. The developer reviewed the suggestions and tested application behavior.
 
-## Entry 1 – Document Authorization and Permissions
+## Entry 1 - Document Authorization and Permissions
 
 **Date:** 5 November 2026
 
@@ -18,9 +18,11 @@ AI assistance was used for coding guidance, debugging, implementation suggestion
 
 **Correction and verification:** Reviewed the permission logic, document ownership and sharing records, and tested access using separate accounts. Updated the implementation and checked the affected routes.
 
-**Related commit:** Add the actual Git commit link after committing this work.
+**Related commits:**
+- https://github.com/Meenu1012/TrustVault/commit/8d2b936
+- https://github.com/Meenu1012/TrustVault/commit/7abfcc5
 
-## Entry 2 – TXT and PDF Document Editing
+## Entry 2 - TXT and PDF Document Editing
 
 **Date:** 5 November 2026
 
@@ -34,9 +36,12 @@ AI assistance was used for coding guidance, debugging, implementation suggestion
 
 **Correction and verification:** Installed and checked PyMuPDF in the Python environment. Implemented separate editing routes and tested the PDF editor using a sample document.
 
-**Related commit:** Add the actual Git commit link after committing this work.
+**Related commits:**
+- https://github.com/Meenu1012/TrustVault/commit/8d2b936
+- https://github.com/Meenu1012/TrustVault/commit/34826fa
+- https://github.com/Meenu1012/TrustVault/commit/cc9b179
 
-## Entry 3 – PDF Text Placement Bug
+## Entry 3 - PDF Text Placement Bug
 
 **Date:** 7 November 2026
 
@@ -50,9 +55,9 @@ AI assistance was used for coding guidance, debugging, implementation suggestion
 
 **Correction and verification:** Revised the approach to inspect existing text blocks and calculate a position below the existing content. Tested the revised PDF editor and observed that newly added text appeared below the existing content in the sample document. Previously inserted overlapping text remained in the test PDF.
 
-**Related commit:** Add the actual Git commit link after committing this work.
+**Related commit:** https://github.com/Meenu1012/TrustVault/commit/7abfcc5
 
-## Entry 4 – View-Only and Edit Permission Testing
+## Entry 4 - View-Only and Edit Permission Testing
 
 **Date:** 7 November 2026
 
@@ -66,9 +71,9 @@ AI assistance was used for coding guidance, debugging, implementation suggestion
 
 **Correction and verification:** Performed manual authorization tests. The tested View Only requests to document replacement, TXT editing and PDF editing returned HTTP 403.
 
-**Related commit:** Add the actual Git commit link after committing this work.
+**Related commit:** https://github.com/Meenu1012/TrustVault/commit/8d2b936
 
-## Entry 5 – Document Replacement and Permission Preservation
+## Entry 5 - Document Replacement and Permission Preservation
 
 **Date:** 7 November 2026
 
@@ -80,9 +85,9 @@ AI assistance was used for coding guidance, debugging, implementation suggestion
 
 **Problem identified:** Replacing a document should not unintentionally remove existing sharing permissions.
 
-**Correction and verification:** Tested replacement using the Edit Access workflow. The shared document continued to display the existing Edit permission afterward. Further automated testing is still required.
+**Correction and verification:** Tested replacement using the Edit Access workflow. The shared document continued to display the existing Edit permission afterward. The replacement implementation checks Edit permission before allowing replacement. Further automated testing is still required.
 
-**Related commit:** Add the actual Git commit link after committing this work.
+**Related commit:** https://github.com/Meenu1012/TrustVault/commit/34826fa
 
 ## AI Usage Reflection
 
