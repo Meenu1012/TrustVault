@@ -98,6 +98,10 @@ def create_app():
     app.register_blueprint(auth_bp)
     app.register_blueprint(documents_bp)
     app.register_blueprint(admin_bp)
+    # Health check endpoint for Render
+    @app.route("/api/health")
+    def health_check():
+        return {"status": "OK", "message": "TrustVault is running"}, 200
 
     # Create database tables
     with app.app_context():
