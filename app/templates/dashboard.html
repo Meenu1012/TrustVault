@@ -28,7 +28,7 @@
             <div class="stat-icon">D</div>
             <p>TOTAL DOCUMENTS</p>
             <h3>{{ documents|length }}</h3>
-            <span>documents you own</span>
+            <span>Documents you own</span>
         </div>
 
         <div class="stat-card">
@@ -52,7 +52,7 @@
 
         <div class="section-heading">
             <div>
-                <p class="dashboard-label">ADD NEW doc</p>
+                <p class="dashboard-label">ADD NEW FILE</p>
                 <h3>Upload a document</h3>
                 <p>Choose a file to add it to your personal workspace.</p>
             </div>
@@ -73,7 +73,7 @@
 
                 <span class="upload-symbol">+</span>
                 <strong>Choose a document</strong>
-                <span>PDF, doc, docX, TXT, PNG or JPG</span>
+                <span>PDF, DOC, DOCX, TXT, PNG or JPG</span>
 
                 <input
                     type="file"
@@ -104,11 +104,11 @@
             <div>
                 <p class="dashboard-label">YOUR FILE COLLECTION</p>
                 <h3>My documents</h3>
-                <p>documents uploaded to your account.</p>
+                <p>Documents uploaded to your account.</p>
             </div>
 
             <span class="document-count">
-                {{ documents|length }} files
+                {{ documents|length }} {{ "file" if documents|length == 1 else "files" }}
             </span>
         </div>
 
