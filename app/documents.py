@@ -39,7 +39,7 @@ ALLOWED_EXTENSIONS = {
 STORAGE_BUCKET = "trustvault-documents"
 
 
-# Local upload folder (used by automated tests)
+# Local upload folder
 def get_upload_folder():
 
     folder = os.path.join(
@@ -177,9 +177,6 @@ def can_access_document(document):
     if document.owner_id == current_user.id:
         return True
 
-    if current_user.role == "admin":
-        return True
-
     permission = DocumentPermission.query.filter_by(
         document_id=document.id,
         user_id=current_user.id
@@ -192,9 +189,6 @@ def can_access_document(document):
 def can_edit_document(document):
 
     if document.owner_id == current_user.id:
-        return True
-
-    if current_user.role == "admin":
         return True
 
     permission = DocumentPermission.query.filter_by(
@@ -338,6 +332,19 @@ def view_document(document_id):
 
     document = get_document(document_id)
 
+    permission = DocumentPermission.query.filter_by(
+        document_id=document.id,
+        user_id=current_user.id
+    ).first()
+
+    current_app.logger.warning(
+        "ACCESS CHECK: user_id=%s, role=%s, owner_id=%s, permission=%s",
+        current_user.id,
+        current_user.role,
+        document.owner_id,
+        permission.permission if permission else "NONE"
+    )
+
     if not can_access_document(document):
         abort(403)
 
@@ -397,7 +404,7 @@ def download_document(document_id):
 # Replace document
 @documents_bp.route(
     "/replace/<int:document_id>",
-    methods=["POST"]
+    methods=["GET", "POST"]
 )
 @login_required
 def replace_document(document_id):
@@ -406,6 +413,18 @@ def replace_document(document_id):
 
     if not can_edit_document(document):
         abort(403)
+
+    if request.method == "GET":
+
+        flash(
+            "Please use the replacement form to upload a file.",
+            "info"
+        )
+
+        if document.owner_id == current_user.id:
+            return redirect(url_for("documents.dashboard"))
+
+        return redirect(url_for("documents.shared_documents"))
 
     if "file" not in request.files:
 
@@ -482,10 +501,7 @@ def replace_document(document_id):
 
         flash("Could not replace the document.", "danger")
 
-        if (
-            document.owner_id == current_user.id
-            or current_user.role == "admin"
-        ):
+        if document.owner_id == current_user.id:
             return redirect(url_for("documents.dashboard"))
 
         return redirect(url_for("documents.shared_documents"))
@@ -502,10 +518,7 @@ def replace_document(document_id):
 
     flash("Document replaced successfully.", "success")
 
-    if (
-        document.owner_id == current_user.id
-        or current_user.role == "admin"
-    ):
+    if document.owner_id == current_user.id:
         return redirect(url_for("documents.dashboard"))
 
     return redirect(url_for("documents.shared_documents"))
@@ -717,10 +730,7 @@ def edit_text_document(document_id):
 
         flash("Document changes saved successfully.", "success")
 
-        if (
-            document.owner_id == current_user.id
-            or current_user.role == "admin"
-        ):
+        if document.owner_id == current_user.id:
             return redirect(url_for("documents.dashboard"))
 
         return redirect(url_for("documents.shared_documents"))
@@ -768,6 +778,7 @@ def edit_pdf_document(document_id):
 
     document = get_document(document_id)
 
+    # Check edit permission
     if not can_edit_document(document):
         abort(403)
 
@@ -823,12 +834,46 @@ def edit_pdf_document(document_id):
 
                     page = pdf[page_number - 1]
 
+                    # Find the lowest existing text position.
+                    # This prevents new text from being placed
+                    # over the document heading or body.
+                    existing_blocks = page.get_text("blocks")
+
+                    if existing_blocks:
+
+                        last_text_position = max(
+                            block[3]
+                            for block in existing_blocks
+                            if block[6] == 0
+                        ) if any(
+                            block[6] == 0
+                            for block in existing_blocks
+                        ) else 72
+
+                    else:
+
+                        last_text_position = 72
+
+                    # Place new text below the existing content.
+                    start_y = max(
+                        72,
+                        last_text_position + 25
+                    )
+
                     text_rect = pymupdf.Rect(
                         72,
-                        72,
+                        start_y,
                         page.rect.width - 36,
-                        min(200, page.rect.height - 36)
+                        page.rect.height - 36
                     )
+
+                    if text_rect.height < 40:
+
+                        raise ValueError(
+                            "There is not enough blank space below "
+                            "the existing content on this page. "
+                            "Please select another page."
+                        )
 
                     remaining = page.insert_textbox(
                         text_rect,
@@ -839,8 +884,11 @@ def edit_pdf_document(document_id):
                     )
 
                     if remaining < 0:
+
                         raise ValueError(
-                            "Text is too long for the selected area."
+                            "The text is too long for the available "
+                            "blank space. Please shorten the text "
+                            "or select another page."
                         )
 
                     edited_data = pdf.tobytes(
@@ -848,6 +896,7 @@ def edit_pdf_document(document_id):
                         deflate=True
                     )
 
+                # Save the edited PDF
                 store_file(
                     document.stored_filename,
                     edited_data,
@@ -862,12 +911,12 @@ def edit_pdf_document(document_id):
 
                 db.session.commit()
 
-                flash("PDF updated successfully.", "success")
+                flash(
+                    "PDF updated successfully.",
+                    "success"
+                )
 
-                if (
-                    document.owner_id == current_user.id
-                    or current_user.role == "admin"
-                ):
+                if document.owner_id == current_user.id:
                     return redirect(url_for("documents.dashboard"))
 
                 return redirect(url_for("documents.shared_documents"))
@@ -899,7 +948,10 @@ def edit_pdf_document(document_id):
                     "PDF editing failed"
                 )
 
-                flash("Could not save PDF changes.", "danger")
+                flash(
+                    "Could not save PDF changes.",
+                    "danger"
+                )
 
     return render_template(
         "edit_pdf.html",
