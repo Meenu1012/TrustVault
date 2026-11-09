@@ -1,4 +1,5 @@
 
+from datetime import timezone, timedelta
 import os
 
 from dotenv import load_dotenv
@@ -12,6 +13,7 @@ from supabase import create_client
 # Load environment variables from .env
 load_dotenv()
 
+
 # Initialize database
 db = SQLAlchemy()
 
@@ -22,12 +24,33 @@ login_manager = LoginManager()
 csrf = CSRFProtect()
 
 
+# Convert UTC timestamps to Indian Standard Time
+def format_ist_datetime(value):
+
+    if not value:
+        return "Unknown"
+
+    # Treat timezone-naive database timestamps as UTC
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+
+    # Indian Standard Time (UTC +05:30)
+    ist = timezone(timedelta(hours=5, minutes=30))
+
+    return value.astimezone(ist).strftime(
+        "%d %b %Y, %I:%M %p IST"
+    )
+
+
 def create_app():
 
     app = Flask(
         __name__,
         instance_relative_config=True
     )
+
+    # Register IST datetime filter for templates
+    app.jinja_env.filters["ist_datetime"] = format_ist_datetime
 
     # Application security settings
     app.config["SECRET_KEY"] = os.environ.get(
@@ -98,10 +121,14 @@ def create_app():
     app.register_blueprint(auth_bp)
     app.register_blueprint(documents_bp)
     app.register_blueprint(admin_bp)
+
     # Health check endpoint for Render
     @app.route("/api/health")
     def health_check():
-        return {"status": "OK", "message": "TrustVault is running"}, 200
+        return {
+            "status": "OK",
+            "message": "TrustVault is running"
+        }, 200
 
     # Create database tables
     with app.app_context():

@@ -1,4 +1,4 @@
-
+```html
 {% extends "base.html" %}
 
 {% block content %}
@@ -189,8 +189,7 @@
                     <p>
                         <strong>Uploaded:</strong>
 
-                        {{ document.uploaded_at.strftime("%d %b %Y, %I:%M %p")
-                        if document.uploaded_at else "Unknown" }}
+                        {{ document.uploaded_at | ist_datetime }}
 
                     </p>
 
@@ -246,8 +245,7 @@
                     <p>
                         <strong>Date:</strong>
 
-                        {{ log.created_at.strftime("%d %b %Y, %I:%M %p")
-                        if log.created_at else "Unknown" }}
+                        {{ log.created_at | ist_datetime }}
 
                     </p>
 
@@ -378,3 +376,4 @@ function confirmPromotion(username) {
 </style>
 
 {% endblock %}
+```
